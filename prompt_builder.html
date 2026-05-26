@@ -1,0 +1,734 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>에잇퍼센트 · 프롬프트 빌더</title>
+  <link href="https://fonts.googleapis.com/css2?family=Pretendard:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --main: #5a0ad2;
+      --main-light: rgba(90,10,210,0.15);
+      --grad1: #8081ff;
+      --grad2: #8CC0FF;
+      --bg: #f7f7fb;
+      --sidebar-bg: #1a0a3a;
+      --surface: #ffffff;
+      --border: #e8e8f0;
+      --text: #1a1a2e;
+      --muted: #888899;
+      --chip-bg: #f0eeff;
+      --chip-border: #ddd8f8;
+      --chip-active-bg: #5a0ad2;
+      --chip-active-text: #ffffff;
+    }
+    body { font-family: 'Pretendard', -apple-system, sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
+
+    /* TOP NAV */
+    .topnav {
+      display: flex; align-items: center; gap: 12px;
+      background: var(--sidebar-bg); padding: 0 24px; height: 52px;
+      border-bottom: 1px solid rgba(255,255,255,0.08);
+      position: sticky; top: 0; z-index: 100;
+    }
+    .logo-mark { width: 28px; height: 28px; background: var(--main); border-radius: 6px; display:flex; align-items:center; justify-content:center; font-size:12px; font-weight:700; color:#fff; }
+    .topnav-title { font-size: 13px; font-weight: 600; color: rgba(255,255,255,0.6); letter-spacing: 0.04em; }
+    .topnav-back { margin-right: auto; display: none; }
+    .tab-bar { display: flex; align-items: center; gap: 4px; margin-left: auto; }
+    .tab-btn {
+      font-size: 12px; font-weight: 600; padding: 5px 14px; border-radius: 6px;
+      border: none; cursor: pointer; transition: all 0.2s; letter-spacing: 0.02em;
+      background: transparent; color: rgba(255,255,255,0.4);
+    }
+    .tab-btn.active { background: rgba(128,129,255,0.2); color: #8081ff; }
+    .tab-btn:hover:not(.active) { color: rgba(255,255,255,0.7); }
+
+    /* LAYOUT */
+    .layout { display: grid; grid-template-columns: 380px 1fr; min-height: calc(100vh - 52px); }
+
+    /* LEFT PANEL */
+    .panel {
+      background: var(--surface); border-right: 1px solid var(--border);
+      overflow-y: auto; max-height: calc(100vh - 52px);
+      padding-bottom: 32px;
+    }
+
+    .panel-header { padding: 32px 24px 24px; }
+    .panel-header h2 { font-size: 26px; font-weight: 700; line-height: 1.2; margin-bottom: 10px; }
+    .panel-header h2 em { font-style: normal; color: var(--main); }
+    .panel-header p { font-size: 13px; color: var(--muted); line-height: 1.6; }
+
+    /* SECTIONS */
+    .section { border-top: 1px solid var(--border); }
+    .section-header {
+      display: flex; align-items: center; gap: 10px;
+      padding: 14px 24px; cursor: pointer; user-select: none;
+      transition: background 0.15s;
+    }
+    .section-header:hover { background: #fafafa; }
+    .section-num { font-size: 11px; font-weight: 700; color: var(--muted); min-width: 20px; }
+    .section-title { font-size: 13px; font-weight: 700; flex: 1; }
+    .section-sub { font-size: 11px; color: var(--grad1); font-weight: 500; background: rgba(128,129,255,0.1); padding: 2px 7px; border-radius: 4px; }
+    .section-badge { font-size: 10px; color: var(--muted); font-weight: 500; margin-left: auto; }
+    .section-arrow { font-size: 12px; color: var(--muted); transition: transform 0.2s; }
+    .section.open .section-arrow { transform: rotate(180deg); }
+    .section-body { padding: 4px 24px 20px; display: none; }
+    .section.open .section-body { display: block; }
+
+    /* CATEGORY TABS */
+    .cat-tabs { display: flex; gap: 8px; padding: 12px 0 4px; }
+    .cat-tab {
+      font-size: 13px; font-weight: 600; padding: 6px 16px;
+      border-radius: 20px; border: none; cursor: pointer;
+      transition: all 0.15s;
+      background: var(--chip-bg); color: var(--main);
+    }
+    .cat-tab.active { background: var(--main); color: #fff; }
+
+    /* GROUP */
+    .group { margin-top: 16px; }
+    .group-label { font-size: 11px; color: var(--muted); font-weight: 600; letter-spacing: 0.06em; margin-bottom: 8px; border-top: 1px solid var(--border); padding-top: 12px; }
+    .chips { display: flex; flex-wrap: wrap; gap: 7px; }
+
+    /* CHIP */
+    .chip {
+      font-size: 12px; font-weight: 500;
+      padding: 6px 12px; border-radius: 20px;
+      border: 1px solid var(--chip-border);
+      background: var(--chip-bg); color: #444;
+      cursor: pointer; transition: all 0.15s; line-height: 1.3;
+    }
+    .chip:hover { border-color: var(--grad1); color: var(--main); }
+    .chip.selected { background: var(--main); border-color: var(--main); color: #fff; }
+
+    /* CUSTOM INPUT */
+    .custom-input-row { display: flex; gap: 8px; margin-top: 12px; }
+    .custom-input {
+      flex: 1; font-family: inherit; font-size: 13px;
+      padding: 8px 12px; border: 1px solid var(--border);
+      border-radius: 8px; background: #fafafa; color: var(--text);
+      outline: none; transition: border-color 0.2s;
+    }
+    .custom-input:focus { border-color: var(--grad1); }
+    .custom-input::placeholder { color: var(--muted); }
+    .add-btn {
+      font-family: inherit; font-size: 13px; font-weight: 600;
+      padding: 8px 16px; border-radius: 8px;
+      border: none; background: var(--main); color: #fff;
+      cursor: pointer; transition: opacity 0.15s; white-space: nowrap;
+    }
+    .add-btn:hover { opacity: 0.85; }
+
+    /* EXCLUDE (multi select) */
+    .exclude-note { font-size: 11px; color: var(--muted); margin-bottom: 8px; }
+
+    /* RESET */
+    .reset-btn {
+      display: block; width: 100%; margin: 20px 24px 0;
+      width: calc(100% - 48px);
+      font-family: inherit; font-size: 12px; font-weight: 600;
+      padding: 10px; border-radius: 8px;
+      border: 1px solid var(--border); background: transparent;
+      color: var(--muted); cursor: pointer; transition: all 0.15s;
+    }
+    .reset-btn:hover { border-color: var(--main); color: var(--main); }
+
+    /* RIGHT PANEL */
+    .result-area {
+      padding: 40px 40px 40px;
+      display: flex; flex-direction: column; gap: 24px;
+      overflow-y: auto; max-height: calc(100vh - 52px);
+    }
+
+    .result-box {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 16px; overflow: hidden;
+    }
+    .result-box-header {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 16px 20px; border-bottom: 1px solid var(--border);
+    }
+    .result-box-title { font-size: 13px; font-weight: 700; }
+    .result-box-actions { display: flex; gap: 8px; }
+    .action-btn {
+      font-family: inherit; font-size: 12px; font-weight: 600;
+      padding: 6px 14px; border-radius: 8px; border: none; cursor: pointer;
+      transition: all 0.15s;
+    }
+    .action-btn.secondary { background: #f0eeff; color: var(--main); }
+    .action-btn.secondary:hover { background: #e4d9ff; }
+    .action-btn.primary { background: var(--main); color: #fff; }
+    .action-btn.primary:hover { opacity: 0.85; }
+
+    .prompt-textarea {
+      width: 100%; min-height: 160px; font-family: inherit;
+      font-size: 14px; line-height: 1.7; color: var(--text);
+      padding: 20px; border: none; outline: none; resize: vertical;
+      background: transparent;
+    }
+
+    .custom-add-row { display: flex; gap: 8px; padding: 0 20px 16px; }
+    .custom-add-input {
+      flex: 1; font-family: inherit; font-size: 13px;
+      padding: 8px 12px; border: 1px solid var(--border);
+      border-radius: 8px; background: #fafafa; color: var(--text);
+      outline: none; transition: border-color 0.2s;
+    }
+    .custom-add-input:focus { border-color: var(--grad1); }
+    .custom-add-input::placeholder { color: var(--muted); }
+    .separator { color: var(--muted); font-size: 13px; padding: 0 4px; display:flex; align-items:center; }
+
+    /* HISTORY */
+    .history-box {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 16px; overflow: hidden;
+    }
+    .history-header {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 16px 20px; border-bottom: 1px solid var(--border);
+    }
+    .history-title { font-size: 13px; font-weight: 700; }
+    .history-actions { display: flex; gap: 8px; }
+    .history-list { padding: 8px 0; min-height: 60px; }
+    .history-empty { font-size: 13px; color: var(--muted); padding: 20px; text-align: center; }
+    .history-item {
+      padding: 12px 20px; cursor: pointer; transition: background 0.15s;
+      border-bottom: 1px solid var(--border); font-size: 13px;
+      color: var(--text); line-height: 1.5;
+    }
+    .history-item:last-child { border-bottom: none; }
+    .history-item:hover { background: #fafafa; }
+    .history-item-text { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--muted); font-size: 12px; margin-top: 2px; }
+
+    /* COPY TOAST */
+    .toast {
+      position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(20px);
+      background: #1a1a2e; color: #fff; font-size: 13px; font-weight: 600;
+      padding: 10px 20px; border-radius: 8px; opacity: 0;
+      transition: all 0.3s; pointer-events: none; z-index: 999;
+    }
+    .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+    @media (max-width: 768px) {
+      .layout { grid-template-columns: 1fr; }
+      .result-area { display: none; }
+      .panel { max-height: none; border-right: none; }
+    }
+  </style>
+</head>
+<body>
+
+<nav class="topnav">
+  <div class="logo-mark">8%</div>
+  <span class="topnav-title">Prompt Builder</span>
+  <div class="tab-bar">
+    <button class="tab-btn active" onclick="switchTab('object')">오브제 그래픽</button>
+    <button class="tab-btn" onclick="switchTab('scene')">상황 묘사</button>
+  </div>
+</nav>
+
+<div class="layout">
+  <!-- LEFT PANEL -->
+  <div class="panel" id="leftPanel">
+    <div class="panel-header">
+      <h2 id="panelTitle">블록을 고르면<br><em>문장이 완성됩니다.</em></h2>
+      <p id="panelDesc">항목을 클릭해 펼치고, 원하는 표현을 선택하세요. 오른쪽에 프롬프트가 실시간으로 조립됩니다.</p>
+    </div>
+    <div id="sectionsContainer"></div>
+    <button class="reset-btn" onclick="resetAll()">전체 초기화</button>
+  </div>
+
+  <!-- RIGHT PANEL -->
+  <div class="result-area">
+    <div class="result-box">
+      <div class="result-box-header">
+        <span class="result-box-title">완성된 프롬프트</span>
+        <div class="result-box-actions">
+          <div class="custom-add-row" style="padding:0; gap:6px;">
+            <input class="custom-add-input" id="directInput" placeholder="직접 추가" style="width:160px;">
+            <span class="separator">—</span>
+          </div>
+          <button class="action-btn secondary" onclick="savePrompt()">저장</button>
+          <button class="action-btn primary" onclick="copyPrompt()">복사하기</button>
+        </div>
+      </div>
+      <textarea class="prompt-textarea" id="promptOutput" placeholder="블록 선택이 자동으로 반영됩니다" readonly></textarea>
+    </div>
+
+    <div class="history-box">
+      <div class="history-header">
+        <span class="history-title">저장된 프롬프트</span>
+        <div class="history-actions">
+          <button class="action-btn secondary" onclick="exportHistory()">히스토리 내보내기</button>
+          <button class="action-btn secondary" onclick="importHistory()">가져오기</button>
+        </div>
+      </div>
+      <div class="history-list" id="historyList">
+        <div class="history-empty">저장된 프롬프트가 없습니다.</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast">복사되었습니다!</div>
+
+<script>
+// ─── DATA ───────────────────────────────────────────────────────────────────
+
+const OBJECT_DATA = {
+  category: { label: '카테고리', options: ['대출', '투자'] },
+
+  message_대출: {
+    label: '전달 메시지', sub: '카테고리 맞춤',
+    groups: {
+      '빠른 승인': ['승인 완료 체크 표시', '즉시 커지는 승인 알림', '시계와 체크마크 조합', '빠르게 열리는 문', '도장이 선명하게 찍힌 서류', '막힘없이 이어지는 진행선'],
+      '넉넉한 한도': ['넓게 열리는 금고', '가득 채워진 한도 게이지', '여유롭게 확장되는 원형 그래프', '커지는 숫자 대신 커지는 막대 형태', '넓은 공간감이 느껴지는 구성', '풍성하게 쌓인 동전과 집 모형'],
+      '주부·시니어도 가능': ['쉽고 편안한 안내 화면', '큰 체크 버튼이 있는 간단한 신청 화면', '따뜻한 생활 공간 오브제', '복잡하지 않은 서류 한 장', '부드러운 집 실루엣과 체크', '안정감 있는 둥근 형태'],
+      '간편 신청': ['스마트폰 화면의 완료 상태', '손쉬운 터치 흐름', '단계가 적어 보이는 진행 표시', '깔끔한 신청서와 체크', '복잡한 서류가 정리되는 장면'],
+    }
+  },
+
+  message_투자: {
+    label: '전달 메시지', sub: '카테고리 맞춤',
+    groups: {
+      '꾸준한 수익': ['차곡차곡 쌓이는 코인', '일정하게 올라가는 그래프', '매달 채워지는 달력 칸', '작은 빛들이 누적되는', '안정적으로 성장하는 나무'],
+      '분산 투자': ['여러 갈래로 나뉜 포트폴리오 조각', '균형 잡힌 저울과 여러 코인', '서로 다른 블록이 안정적으로 맞물린', '여러 점이 연결된 네트워크', '위험이 나뉘어 보이는 방패형 구성'],
+      '소액 시작': ['작은 씨앗에서 시작되는 성장', '작은 동전 하나가 커지는 흐름', '작게 시작해 넓게 퍼지는 물결', '가벼운 첫 발걸음 느낌', '미니멀한 코인과 새싹'],
+      '안정성': ['단단한 방패', '흔들림 없는 기둥 형태', '균형 잡힌 저울', '잠금장치가 있는 금고', '차분하고 신뢰감 있는 구조'],
+    }
+  },
+
+  object_대출: {
+    label: '오브제', sub: '카테고리 인접',
+    custom: true,
+    groups: {
+      '': ['보라색 열쇠', '서류 위 승인 도장', '집 + 퍼즐 조각', '동전 더미 + 돋보기', '체크 마크', '열린 자물쇠', '스마트폰 + 승인 화면', '집 + 열쇠 묶음', '지갑 + 동전', '계약서 + 펜', '저울 + 집 모형', '부동산 등기부등본', '대출 승인 알림 화면', '시계 + 체크', '금고 + 열린 문', '인감 도장']
+    }
+  },
+
+  object_투자: {
+    label: '오브제', sub: '카테고리 인접',
+    custom: true,
+    groups: {
+      '': ['우상향 선 그래프', '균형 저울', '순환하는 동전', '층층이 쌓인 코인 타워', '방패', '씨앗 + 새싹', '달력 + 코인', '트로피', '모래시계', '복리 계산기', '저금통', '성장하는 나무', '수익 게이지', '금고', '지도 + 목표 경로', '동전 + 아이콘 그래프']
+    }
+  },
+
+  shape: {
+    label: '형태',
+    groups: {
+      '전체적 인상': ['단순하고 한눈에 보이는 모양', '깔끔한 모양', '또렷한 실루엣', '핵심만 보이는 형태', '장식이 많지 않은 형태', '묵직하고 안정감 있는 형태', '가볍고 둥근 느낌의 형태', '딱딱하지 않고 부드러운 형태', '크고 존재감 있는 형태', '고급스럽고 무게감 있는 형태', '귀엽고 말랑한 느낌의 형태', '힘 있고 단단해 보이는 형태', '가볍게 떠 있는 느낌의 형태'],
+      '입체감': ['납작하지 않고 입체감이 느껴지는 형태', '두툼하고 볼륨감 있는 형태', '속이 꽉 찬 느낌의 형태', '앞으로 살짝 튀어나온 느낌의 형태', '안이 비어있는 느낌의 형태', '층이 나뉘어진 느낌의 형태', '그림자가 자연스럽게 생기는 형태', '두께가 느껴지는 형태'],
+      '비율·구조': ['균형이 잘 잡힌 형태', '좌우 대칭이 잘 맞는 형태', '비대칭이지만 균형감 있는 형태', '여러 요소가 겹쳐 있는 구성', '중심에서 바깥으로 퍼지는 구성', '위아래로 길쭉한 형태', '좌우로 넓은 형태', '큰 것과 작은 것이 함께 있는 구성'],
+      '디테일': ['선이 많지 않고 면 위주의 형태', '꼭 필요한 디테일만 남긴 형태', '외곽선이 두껍고 뚜렷한 형태', '외곽선이 없이 면으로만 이루어진 형태', '새것처럼 깨끗하고 흠집 없는 형태', '안쪽 구조가 보이는 형태'],
+    }
+  },
+
+  composition: {
+    label: '구도',
+    groups: {
+      '시점·각도': ['앞에서 바로 보는', '살짝 비스듬히 보는', '살짝 위에서 내려다보는', '살짝 아래에서 올려다보는', '비스듬히 45도 각도로 보는', '옆에서 보는', '뒤에서 살짝 돌아보는'],
+      '위치·배치': ['가운데에 하나만 보이는', '여백이 넉넉하게 느껴지는', '오브제가 꽉 차 보이는', '한쪽으로 치우치지 않고 고르게 배치된', '살짝 위쪽에 배치된'],
+      '거리·요소': ['가까이서 크게 보이는', '멀리서 전체가 보이는', '오브제 하나만 단독으로 보이는', '두 개의 요소가 나란히 있는', '여러 요소가 모여 하나처럼 보이는', '앞뒤 원근감이 느껴지는'],
+    }
+  },
+
+  light: {
+    label: '빛',
+    groups: {
+      '밝기·강도': ['전체적으로 밝고 환한 느낌', '전체적으로 어둡고 차분한 느낌', '은은하게 빛이 퍼져 있는 느낌', '한 곳에서 강하게 빛이 비치는 느낌', '밝은 부분과 어두운 부분의 차이가 큰 느낌'],
+      '방향': ['위에서 아래로 빛이 내려오는 느낌', '앞에서 정면으로 빛이 비치는 느낌', '옆에서 비스듬히 빛이 들어오는 느낌', '뒤에서 빛이 비쳐 테두리가 빛나는 느낌', '사방에서 고르게 빛이 비치는 느낌', '아래에서 위로 빛이 올라오는 느낌'],
+      '반사·효과': ['은은하게 반짝이는 느낌', '살짝 비치는 느낌', '너무 번쩍이지 않는 느낌', '자연스럽게 광택이 느껴지는 느낌', '주변으로 은은한 빛 후광이 생기는 느낌', '빛이 내부에서 새어 나오는 느낌'],
+      '그림자': ['그림자가 없이 떠 있는 느낌', '바닥에 그림자가 자연스럽게 생기는 느낌', '그림자가 길게 늘어진 느낌', '그림자가 짧고 동툭한 느낌'],
+    }
+  },
+
+  surface: {
+    label: '표면',
+    groups: {
+      '질감·마감': ['매끈하고 자연스럽게 광택이 느껴지는 느낌', '아주 미세한 결이 있는 느낌', '보송한 느낌', '너무 매끈하지 않은 느낌', '표면이 벨벳처럼 보드라운 느낌', '표면에 미세한 점들이 촘촘히 박힌 느낌', '표면에 얕은 줄무늬가 있는 느낌'],
+      '재질감': ['금속처럼 단단하고 차가운 느낌', '플라스틱처럼 가볍고 매끈한 느낌', '고무처럼 탄성 있고 말랑한 느낌', '도자기처럼 단단하고 섬세한 느낌', '유리처럼 투명하고 깨질 것 같은 느낌', '패브릭처럼 부드럽고 따뜻한 느낌'],
+      '광택·투명도': ['안이 조금 비쳐 보이는 느낌', '광택이 전혀 없고 완전히 매트한 느낌', '거울처럼 주변이 비치는 느낌', '뿌옇게 안이 살짝 보이는 느낌', '광택이 부분적으로만 있는 느낌'],
+    }
+  },
+
+  color: {
+    label: '색상',
+    groups: {
+      '채도·농도': ['색이 선명하고 채도가 높은 느낌', '색이 연하고 파스텔톤인 느낌', '색이 탁하고 무게감 있는 느낌', '색이 진하고 깊이감 있는 느낌', '색이 투명하고 가벼운 느낌'],
+      '색 조합': ['브랜드 컬러 중심', '한두 가지 색만 쓴 느낌', '강조 색이 보이는 느낌', '색이 과하지 않은 느낌', '색이 자연스럽게 섞여 그라데이션이 있는 느낌', '색의 경계가 뚜렷하게 나뉜 느낌', '전체는 무채색이고 일부만 색이 있는 느낌'],
+      '톤·온도': ['따뜻한 계열의 색으로 이루어진 느낌', '차갑고 시원한 계열의 색', '중립적인 색 느낌', '전체적으로 밝고 가벼운 색 느낌', '전체적으로 어둡고 무거운 색 느낌', '포인트 색이 테두리에만 있는 느낌'],
+    }
+  },
+
+  background: {
+    label: '배경',
+    groups: {
+      '투명': ['투명 PNG로', '배경 없이 오브제만 단독으로', '바닥 그림자도 없이 완전히 투명하게'],
+      '단색': ['완전히 흰 배경', '완전히 검은 배경', '밝은 회색 배경', '어두운 회색 배경', '아이보리처럼 따뜻한 흰 배경'],
+      '그라데이션': ['파스텔 그라데이션 배경', '두 가지 색이 부드럽게 섞인 그라데이션 배경', '위에서 아래로 색이 바뀌는 그라데이션 배경', '한쪽 모서리에서 퍼지는 그라데이션 배경'],
+      '질감': ['배경에 아주 미세한 노이즈가 있는 느낌', '배경에 종이 같은 결이 느껴지는 느낌', '배경 가장자리가 어둡고 중심이 밝은 느낌'],
+    }
+  },
+
+  exclude: {
+    label: '제외 요소', badge: '복수 선택',
+    groups: {
+      '': ['글자', '숫자', '작은 장식', '바닥 그림자', '복잡한 배경', '불필요한 요소', '받침대', '텍스트 라벨']
+    }
+  }
+};
+
+const SCENE_DATA = {
+  category: { label: '카테고리', options: ['대출', '투자'] },
+
+  message_대출: {
+    label: '전달 메시지', sub: '카테고리 맞춤',
+    groups: {
+      '빠른 승인': ['어둠 속에서 승인 불빛이 즉시 켜지는', '닫힌 문이 빠르게 열리는', '서류 위 체크 표시가 선명하게 떠오르는', '막혀 있던 길이 한 번에 뚫리는', '대기 시간이 짧아 보이는 빠른 빛의 흐름'],
+      '넉넉한 한도': ['좁은 공간이 넓게 확장되는', '작은 빛이 넓은 영역으로 퍼지는', '게이지가 충분히 차오른 듯한', '금고 문이 넓게 열리는', '여유로운 공간감과 넓은 시야가 느껴지는'],
+      '주부·시니어도 가능': ['따뜻하고 편안한 생활 공간이 중심인', '복잡한 절차가 단순하게 정리되는', '부드럽고 쉬운 안내 흐름이 보이는', '차갑지 않고 안심되는 분위기의', '일상적인 집 안 공간에서 해결감이 느껴지는'],
+      '간편 신청': ['스마트폰에서 신청이 완료되는', '복잡한 서류가 간단히 정리되는', '짧은 단계들이 한 줄로 이어지는', '터치 한 번으로 빛이 켜지는', '신청 흐름이 막힘없이 이어지는'],
+    }
+  },
+
+  message_투자: {
+    label: '전달 메시지', sub: '카테고리 맞춤',
+    groups: {
+      '꾸준한 수익': ['작은 빛들이 시간에 따라 차곡차곡 쌓이는', '일정한 리듬으로 그래프가 올라가는', '달력 위에 성과가 누적되는', '성장하는 나무가 안정적으로 자라는', '쌓인 동전들이 은은하게 빛나는'],
+      '분산 투자': ['여러 경로로 빛이 나뉘어 연결되는', '다양한 블록이 균형 있게 배치되는', '여러 지점이 안정적인 네트워크로 이어지는', '위험이 나뉘어 분산되는 듯한', '포트폴리오 조각들이 맞물리는'],
+      '소액 시작': ['작은 씨앗에서 빛이 시작되는', '작은 동전 하나에서 큰 물결이 퍼지는', '작게 시작한 흐름이 넓게 확장되는', '첫 시작이 가볍고 명확해 보이는', '작은 점들이 모여 성장 곡선을 만드는'],
+      '안정성': ['흔들림 없는 구조물이 중심에 있는', '방패처럼 보호되는 느낌의', '균형 잡힌 저울이 안정적으로 놓인', '차분하고 신뢰감 있는 빛이 유지되는', '단단한 기반 위에 성장 요소가 놓인'],
+    }
+  },
+
+  background: {
+    label: '배경 환경',
+    groups: {
+      '도시·건축': ['도시 야경', '빌딩 숲 속', '주택가 골목', '아파트 단지 전경', '오래된 빌딩 외관', '건물 내부 공간', '로비·복도', '옥상에서 내려다보는 도시', '고층 창문에서 바라본 도시', '지하 주차장 공간'],
+      '자연·공간': ['탁 트인 들판', '산 위에서 내려다보는 풍경', '바다가 보이는 창가', '안개 속 공간', '비 오는 거리', '이른 새벽 공간', '낙엽 덮인 골목', '눈 쌓인 풍경'],
+      '추상 공간': ['어두운 공간 속', '그라데이션 배경 위', '빛이 퍼지는 추상 공간', '선들이 이어지는 추상 공간', '공중에 떠 있는 느낌의 공간', '깊이감 있는 터널 구조'],
+    }
+  },
+
+  keyElement: {
+    label: '핵심 요소', sub: '카테고리 맞춤',
+    groups: {
+      '빛·해결': ['하나의 건물만 빛나는', '한 개의 창문에만 불이 켜진', '문 틈새로 빛이 새어나오는', '주변은 어둡고 우리 집만 빛나는', '어두운 서류 더미 속 하나만 빛나는', '열쇠 구멍으로 빛이 비치는', '건물 꼭대기에서만 빛이 나는', '유리창 너머로 빛이 비치는'],
+      '움직임·전환': ['자물쇠가 풀리는 순간', '문이 천천히 열리는', '체인이 끊어지는 순간', '무거운 짐이 내려지는 장면', '막혀있던 길이 뚫리는 장면', '서류에 도장이 찍히는 순간', '열쇠가 자물쇠에 맞춰지는 순간', '닫혀있던 문이 활짝 열리는 장면'],
+      '대비·강조': ['주변과 다르게 홀로 도드라진', '낡은 것들 사이에 새것처럼 보이는', '꺼진 것들 사이에 혼자 켜진', '무거운 것들이 사라지고 가벼워지는', '어두운 것들 속에 밝게 빛나는', '막혀있던 것이 뚫리는 순간'],
+    }
+  },
+
+  timeofday: {
+    label: '시간대', sub: '카테고리 맞춤',
+    groups: {
+      '어둠→빛 전환': ['새벽 (어둠이 걷히기 직전)', '동이 트는 이른 아침', '안개가 걷히는 아침', '비가 막 그친 직후', '흐린 하늘이 걷히는 순간'],
+      '무게의 시간': ['흐린 낮 (구름 가득)', '비 오는 날', '저무는 황혼', '야간 (홀로 빛나는)'],
+    }
+  },
+
+  lighting: {
+    label: '조명 처리', sub: '카테고리 맞춤',
+    groups: {
+      '집중형 (해결의 빛)': ['어둠을 뚫고 하나만 밝히는', '문 틈새로 스며드는 따뜻한 빛', '실루엣을 가르는 한 줄기 빛', '터널 끝처럼 앞으로만 비치는', '창문 틈새로 빛이 새어나오는'],
+      '분위기형 (안도)': ['차가운 공기 속 따뜻한 빛이 번지는', '안도감이 느껴지는 은은한 황금빛', '무거운 분위기를 걷어내는 따뜻한 조명', '비 갠 후 스며드는 햇빛'],
+    }
+  },
+
+  colorMood: {
+    label: '색감', sub: '카테고리 맞춤',
+    groups: {
+      '해결·희망의 색': ['어둠 속에서 번지는 따뜻한 황금빛', '무거운 회색을 뚫는 앰버 빛', '안도감이 느껴지는 따뜻한 크림·골드', '차가운 청회색에서 따뜻한 빛으로 전환'],
+      '무게·대비의 색': ['흑백에 가까운 저채도에 한 줄기 빛', '어두운 무채색에 황금 포인트', '차갑고 습한 색감에서 따뜻함으로', '안개 속 뿌연 회색 색감'],
+    }
+  },
+
+  camera: {
+    label: '카메라 앵글',
+    groups: {
+      '': ['아래에서 위로 올려다보는', '위에서 아래로 내려다보는', '거리 수준의 정면 시선', '창문 너머로 바라보는', '멀리서 전경을 바라보는', '클로즈업으로 바짝 당긴', '비스듬한 사선 구도', '골목 끝에서 바라보는 원근감'],
+    }
+  },
+
+  mood: {
+    label: '분위기', sub: '카테고리 맞춤',
+    groups: {
+      '해방·안도': ['무거운 짐이 내려지는 안도감', '막혀있던 것이 뚫리는 해방감', '따뜻하고 희망적인', '평온하고 안도감 있는', '숨통이 트이는 느낌'],
+      '무게·전환': ['묵직하지만 곧 바뀔 긴장감', '쓸쓸하지만 곧 나아지는', '조용하지만 변화가 시작되는', '긴박하지 않고 진지한'],
+    }
+  },
+
+  exclude: {
+    label: '제외 요소', badge: '복수 선택',
+    groups: {
+      '': ['글자·간판', '사람 실루엣', '자동차', '과도한 장식', '복잡한 전선·구조물', '플래시·과한 빛 번짐', '현수막', '로고']
+    }
+  }
+};
+
+// ─── STATE ──────────────────────────────────────────────────────────────────
+
+let currentTab = 'object';
+let currentCategory = '대출';
+let selections = {};
+let history = JSON.parse(localStorage.getItem('promptHistory') || '[]');
+
+// ─── RENDER ─────────────────────────────────────────────────────────────────
+
+function getCurrentData() { return currentTab === 'object' ? OBJECT_DATA : SCENE_DATA; }
+
+function renderSections() {
+  const data = getCurrentData();
+  const container = document.getElementById('sectionsContainer');
+  container.innerHTML = '';
+
+  const sectionKeys = currentTab === 'object'
+    ? ['category', 'message', 'object', 'shape', 'composition', 'light', 'surface', 'color', 'background', 'exclude']
+    : ['category', 'message', 'background', 'keyElement', 'timeofday', 'lighting', 'colorMood', 'camera', 'mood', 'exclude'];
+
+  sectionKeys.forEach((key, i) => {
+    const isOpen = i === 0 || (i === 1 && true);
+    const section = document.createElement('div');
+    section.className = 'section' + (isOpen ? ' open' : '');
+    section.dataset.key = key;
+    section.innerHTML = buildSection(key, i + 1, data);
+    container.appendChild(section);
+    section.querySelector('.section-header').addEventListener('click', () => {
+      section.classList.toggle('open');
+    });
+  });
+}
+
+function buildSection(key, num, data) {
+  if (key === 'category') {
+    const d = data.category;
+    return `
+      <div class="section-header">
+        <span class="section-num">${String(num).padStart(2,'0')}</span>
+        <span class="section-title">${d.label}</span>
+        <span class="section-badge">${currentCategory}</span>
+        <span class="section-arrow">▲</span>
+      </div>
+      <div class="section-body">
+        <div class="cat-tabs">
+          ${d.options.map(opt => `<button class="cat-tab ${opt===currentCategory?'active':''}" onclick="setCategory('${opt}')">${opt}</button>`).join('')}
+        </div>
+      </div>`;
+  }
+
+  if (key === 'message') {
+    const d = data[`message_${currentCategory}`];
+    return buildGroupSection(key, num, d.label, d.sub, d.groups);
+  }
+
+  if (key === 'object') {
+    const d = data[`object_${currentCategory}`];
+    return buildGroupSection(key, num, d.label, d.sub, d.groups, d.custom);
+  }
+
+  const d = data[key];
+  if (!d) return '';
+  return buildGroupSection(key, num, d.label, d.sub || '', d.groups, d.custom, d.badge);
+}
+
+function buildGroupSection(key, num, label, sub, groups, hasCustom, badge) {
+  const sel = selections[key] || [];
+  let groupsHtml = '';
+  Object.entries(groups).forEach(([groupLabel, chips]) => {
+    groupsHtml += `<div class="group">`;
+    if (groupLabel) groupsHtml += `<div class="group-label">${groupLabel}</div>`;
+    groupsHtml += `<div class="chips">`;
+    chips.forEach(chip => {
+      const isSelected = sel.includes(chip);
+      groupsHtml += `<span class="chip ${isSelected ? 'selected' : ''}" onclick="toggleChip('${key}', '${chip.replace(/'/g, "\\'")}')">${chip}</span>`;
+    });
+    groupsHtml += `</div></div>`;
+  });
+
+  const customHtml = hasCustom ? `
+    <div class="custom-input-row">
+      <input class="custom-input" id="customInput_${key}" placeholder="목록에 없는 오브제 직접 입력">
+      <button class="add-btn" onclick="addCustom('${key}')">추가</button>
+    </div>` : '';
+
+  return `
+    <div class="section-header">
+      <span class="section-num">${String(num).padStart(2,'0')}</span>
+      <span class="section-title">${label}</span>
+      ${sub ? `<span class="section-sub">${sub}</span>` : ''}
+      ${badge ? `<span class="section-badge" style="margin-left:auto">${badge}</span>` : ''}
+      <span class="section-arrow">▲</span>
+    </div>
+    <div class="section-body">
+      ${groupsHtml}
+      ${customHtml}
+    </div>`;
+}
+
+// ─── INTERACTIONS ────────────────────────────────────────────────────────────
+
+function switchTab(tab) {
+  currentTab = tab;
+  selections = {};
+  document.querySelectorAll('.tab-btn').forEach((btn, i) => {
+    btn.classList.toggle('active', (i === 0 && tab === 'object') || (i === 1 && tab === 'scene'));
+  });
+  const titles = {
+    object: ['블록을 고르면<br><em>문장이 완성됩니다.</em>', '항목을 클릭해 펼치고, 원하는 표현을 선택하세요. 오른쪽에 프롬프트가 실시간으로 조립됩니다.'],
+    scene:  ['장면을 설계하면<br><em>상황이 완성됩니다.</em>', '야경에 미등기 건물만 빛나는 것처럼, 장면 전체로 메시지를 전달합니다.']
+  };
+  document.getElementById('panelTitle').innerHTML = titles[tab][0];
+  document.getElementById('panelDesc').textContent = titles[tab][1];
+  renderSections();
+  buildPrompt();
+}
+
+function setCategory(cat) {
+  currentCategory = cat;
+  const msgSels = selections['message'] || [];
+  const objSels = selections['object'] || [];
+  selections['message'] = [];
+  selections['object'] = [];
+  renderSections();
+  buildPrompt();
+}
+
+function toggleChip(key, value) {
+  if (!selections[key]) selections[key] = [];
+  const idx = selections[key].indexOf(value);
+  if (idx >= 0) selections[key].splice(idx, 1);
+  else selections[key].push(value);
+
+  // Re-render just the chips for this section
+  renderSections();
+  buildPrompt();
+}
+
+function addCustom(key) {
+  const input = document.getElementById(`customInput_${key}`);
+  if (!input || !input.value.trim()) return;
+  const val = input.value.trim();
+  if (!selections[key]) selections[key] = [];
+  if (!selections[key].includes(val)) selections[key].push(val);
+  input.value = '';
+  renderSections();
+  buildPrompt();
+}
+
+function resetAll() {
+  selections = {};
+  renderSections();
+  buildPrompt();
+}
+
+// ─── PROMPT BUILDING ─────────────────────────────────────────────────────────
+
+function buildPrompt() {
+  const parts = [];
+  const cat = currentCategory;
+
+  if (currentTab === 'object') {
+    const order = ['message', 'object', 'shape', 'composition', 'light', 'surface', 'color', 'background'];
+    const labels = {
+      message: '전달 메시지', object: '오브제', shape: '형태', composition: '구도',
+      light: '빛', surface: '표면', color: '색상', background: '배경'
+    };
+    order.forEach(key => {
+      const sel = selections[key];
+      if (sel && sel.length > 0) parts.push(sel.join(', '));
+    });
+    const excl = selections['exclude'];
+    if (excl && excl.length > 0) parts.push(`제외: ${excl.join(', ')}`);
+  } else {
+    const order = ['message', 'background', 'keyElement', 'timeofday', 'lighting', 'colorMood', 'camera', 'mood'];
+    order.forEach(key => {
+      const sel = selections[key];
+      if (sel && sel.length > 0) parts.push(sel.join(', '));
+    });
+    const excl = selections['exclude'];
+    if (excl && excl.length > 0) parts.push(`제외: ${excl.join(', ')}`);
+  }
+
+  // Add direct input
+  const direct = document.getElementById('directInput');
+  if (direct && direct.value.trim()) parts.push(direct.value.trim());
+
+  const output = document.getElementById('promptOutput');
+  output.value = parts.join(' / ');
+}
+
+document.getElementById('directInput')?.addEventListener('input', buildPrompt);
+
+// ─── SAVE / COPY / HISTORY ───────────────────────────────────────────────────
+
+function copyPrompt() {
+  const text = document.getElementById('promptOutput').value;
+  if (!text) return;
+  navigator.clipboard.writeText(text).then(() => showToast('복사되었습니다!'));
+}
+
+function savePrompt() {
+  const text = document.getElementById('promptOutput').value;
+  if (!text) return;
+  const item = { text, tab: currentTab, cat: currentCategory, time: Date.now() };
+  history.unshift(item);
+  localStorage.setItem('promptHistory', JSON.stringify(history));
+  renderHistory();
+  showToast('저장되었습니다!');
+}
+
+function renderHistory() {
+  const list = document.getElementById('historyList');
+  if (!history.length) {
+    list.innerHTML = '<div class="history-empty">저장된 프롬프트가 없습니다.</div>';
+    return;
+  }
+  list.innerHTML = history.map((item, i) => `
+    <div class="history-item" onclick="loadHistory(${i})">
+      <div style="font-size:11px;color:var(--muted);margin-bottom:3px;">${item.tab === 'object' ? '오브제 그래픽' : '상황 묘사'} · ${item.cat} · ${new Date(item.time).toLocaleDateString('ko')}</div>
+      <div class="history-item-text">${item.text}</div>
+    </div>`).join('');
+}
+
+function loadHistory(i) {
+  document.getElementById('promptOutput').value = history[i].text;
+}
+
+function exportHistory() {
+  const blob = new Blob([JSON.stringify(history, null, 2)], { type: 'application/json' });
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
+  a.download = `8percent_prompts_${Date.now()}.json`; a.click();
+}
+
+function importHistory() {
+  const input = document.createElement('input'); input.type = 'file'; input.accept = '.json';
+  input.onchange = e => {
+    const file = e.target.files[0]; if (!file) return;
+    const reader = new FileReader();
+    reader.onload = ev => {
+      try {
+        const imported = JSON.parse(ev.target.result);
+        history = [...imported, ...history];
+        localStorage.setItem('promptHistory', JSON.stringify(history));
+        renderHistory(); showToast('가져왔습니다!');
+      } catch { alert('올바른 JSON 파일을 선택해주세요.'); }
+    };
+    reader.readAsText(file);
+  };
+  input.click();
+}
+
+function showToast(msg) {
+  const t = document.getElementById('toast'); t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2000);
+}
+
+// ─── INIT ────────────────────────────────────────────────────────────────────
+renderSections();
+renderHistory();
+</script>
+</body>
+</html>

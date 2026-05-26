@@ -1,0 +1,449 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>에잇퍼센트 · 톤앤매너 빌더</title>
+  <link href="https://fonts.googleapis.com/css2?family=Pretendard:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --main: #5a0ad2; --grad1: #8081ff; --grad2: #8CC0FF;
+      --bg: #f7f7fb; --sidebar-bg: #1a0a3a;
+      --surface: #ffffff; --border: #e8e8f0;
+      --text: #1a1a2e; --muted: #888899;
+    }
+    body { font-family: 'Pretendard', -apple-system, sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
+
+    .topnav {
+      display: flex; align-items: center; gap: 12px;
+      background: var(--sidebar-bg); padding: 0 24px; height: 52px;
+      border-bottom: 1px solid rgba(255,255,255,0.08);
+      position: sticky; top: 0; z-index: 100;
+    }
+    .logo-mark { width: 28px; height: 28px; background: var(--main); border-radius: 6px; display:flex; align-items:center; justify-content:center; font-size:12px; font-weight:700; color:#fff; }
+    .topnav-title { font-size: 13px; font-weight: 600; color: rgba(255,255,255,0.6); letter-spacing: 0.04em; }
+    .back-btn {
+      margin-left: auto; font-family: inherit; font-size: 12px; font-weight: 600;
+      padding: 5px 14px; border-radius: 6px; border: 1px solid rgba(255,255,255,0.15);
+      color: rgba(255,255,255,0.6); background: transparent; cursor: pointer;
+      text-decoration: none; display: flex; align-items: center; gap: 4px;
+    }
+    .back-btn:hover { border-color: rgba(255,255,255,0.3); color: rgba(255,255,255,0.9); }
+
+    .layout { display: grid; grid-template-columns: 380px 1fr; min-height: calc(100vh - 52px); }
+
+    /* LEFT */
+    .panel { background: var(--surface); border-right: 1px solid var(--border); overflow-y: auto; max-height: calc(100vh - 52px); padding-bottom: 32px; }
+    .panel-header { padding: 32px 24px 24px; }
+    .panel-header h2 { font-size: 26px; font-weight: 700; line-height: 1.2; margin-bottom: 10px; }
+    .panel-header h2 em { font-style: normal; color: var(--main); }
+    .panel-header p { font-size: 13px; color: var(--muted); line-height: 1.6; }
+
+    .section-label { font-size: 11px; font-weight: 700; letter-spacing: 0.08em; color: var(--muted); padding: 16px 24px 10px; text-transform: uppercase; }
+
+    /* PRESETS */
+    .preset-list { padding: 0 16px; display: flex; flex-direction: column; gap: 8px; }
+    .preset-item {
+      padding: 14px 16px; border-radius: 12px; cursor: pointer;
+      border: 1px solid var(--border); background: #fafafa;
+      transition: all 0.15s; position: relative;
+    }
+    .preset-item:hover { border-color: var(--grad1); background: #f5f3ff; }
+    .preset-item.active { border-color: var(--main); background: #f0eeff; }
+    .preset-item-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 4px; }
+    .preset-name { font-size: 14px; font-weight: 700; }
+    .preset-badge {
+      font-size: 10px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase;
+      padding: 2px 8px; border-radius: 4px;
+    }
+    .badge-object { background: #f0eeff; color: var(--main); }
+    .badge-visual { background: #e8f4ff; color: #2878d0; }
+    .badge-scene { background: #e8fff2; color: #1a8a4a; }
+    .badge-graphic { background: #fff8e8; color: #b86b00; }
+    .preset-desc { font-size: 12px; color: var(--muted); line-height: 1.5; }
+
+    /* INPUTS */
+    .inputs-area { padding: 24px 24px 0; }
+    .inputs-title { font-size: 11px; font-weight: 700; letter-spacing: 0.08em; color: var(--muted); text-transform: uppercase; margin-bottom: 16px; border-top: 1px solid var(--border); padding-top: 20px; }
+    .input-group { margin-bottom: 16px; }
+    .input-label { font-size: 12px; font-weight: 600; color: var(--text); margin-bottom: 6px; display: block; }
+    .input-placeholder { font-size: 11px; color: var(--muted); margin-top: 3px; }
+    .text-input {
+      width: 100%; font-family: inherit; font-size: 13px;
+      padding: 9px 12px; border: 1px solid var(--border);
+      border-radius: 8px; background: #fafafa; color: var(--text);
+      outline: none; transition: border-color 0.2s;
+    }
+    .text-input:focus { border-color: var(--grad1); background: #fff; }
+    .select-input {
+      width: 100%; font-family: inherit; font-size: 13px;
+      padding: 9px 12px; border: 1px solid var(--border);
+      border-radius: 8px; background: #fafafa; color: var(--text);
+      outline: none; appearance: none; cursor: pointer;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%23888' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+      background-repeat: no-repeat; background-position: right 12px center;
+      padding-right: 32px;
+    }
+    .select-input:focus { border-color: var(--grad1); }
+
+    /* RIGHT */
+    .result-area { padding: 40px; display: flex; flex-direction: column; gap: 24px; overflow-y: auto; max-height: calc(100vh - 52px); }
+    .result-box { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; overflow: hidden; }
+    .result-box-header { display: flex; align-items: center; justify-content: space-between; padding: 16px 20px; border-bottom: 1px solid var(--border); }
+    .result-box-title { font-size: 13px; font-weight: 700; }
+    .auto-badge { font-size: 11px; color: var(--grad1); font-weight: 600; }
+    .result-box-actions { display: flex; gap: 8px; }
+    .action-btn { font-family: inherit; font-size: 12px; font-weight: 600; padding: 6px 14px; border-radius: 8px; border: none; cursor: pointer; transition: all 0.15s; }
+    .action-btn.secondary { background: #f0eeff; color: var(--main); }
+    .action-btn.secondary:hover { background: #e4d9ff; }
+    .action-btn.primary { background: var(--main); color: #fff; }
+    .action-btn.primary:hover { opacity: 0.85; }
+    .prompt-textarea { width: 100%; min-height: 220px; font-family: inherit; font-size: 14px; line-height: 1.8; color: var(--text); padding: 24px; border: none; outline: none; resize: vertical; background: transparent; }
+    .char-count { font-size: 11px; color: var(--muted); padding: 0 20px 16px; }
+
+    .history-box { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; overflow: hidden; }
+    .history-header { display: flex; align-items: center; justify-content: space-between; padding: 16px 20px; border-bottom: 1px solid var(--border); }
+    .history-title { font-size: 13px; font-weight: 700; }
+    .history-actions { display: flex; gap: 8px; }
+    .history-list { padding: 8px 0; min-height: 60px; }
+    .history-empty { font-size: 13px; color: var(--muted); padding: 20px; text-align: center; }
+    .history-item { padding: 12px 20px; cursor: pointer; transition: background 0.15s; border-bottom: 1px solid var(--border); }
+    .history-item:last-child { border-bottom: none; }
+    .history-item:hover { background: #fafafa; }
+    .history-item-meta { font-size: 11px; color: var(--muted); margin-bottom: 3px; }
+    .history-item-text { font-size: 12px; color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+    .toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(20px); background: #1a1a2e; color: #fff; font-size: 13px; font-weight: 600; padding: 10px 20px; border-radius: 8px; opacity: 0; transition: all 0.3s; pointer-events: none; z-index: 999; }
+    .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+  </style>
+</head>
+<body>
+
+<nav class="topnav">
+  <div class="logo-mark">8%</div>
+  <span class="topnav-title">Tone Prompt Builder</span>
+  <a class="back-btn" href="index.html">← 툴킷으로</a>
+</nav>
+
+<div class="layout">
+  <!-- LEFT -->
+  <div class="panel">
+    <div class="panel-header">
+      <h2>스타일을 고르면<br><em>프롬프트가 완성됩니다.</em></h2>
+      <p>톤앤매너 프리셋을 선택하고 필요한 빈칸만 채우세요. 이미지 생성 도구에 바로 붙여넣을 수 있는 문장으로 정리됩니다.</p>
+    </div>
+
+    <div class="section-label">Tone Preset</div>
+    <div class="preset-list" id="presetList"></div>
+
+    <div class="inputs-area">
+      <div class="inputs-title">Inputs</div>
+      <div id="inputsContainer"></div>
+    </div>
+  </div>
+
+  <!-- RIGHT -->
+  <div class="result-area">
+    <div class="result-box">
+      <div class="result-box-header">
+        <span class="result-box-title" id="resultTitle">—</span>
+        <span class="auto-badge">자동 조립</span>
+        <div class="result-box-actions">
+          <button class="action-btn secondary" onclick="savePrompt()">저장</button>
+          <button class="action-btn primary" onclick="copyPrompt()">복사하기</button>
+        </div>
+      </div>
+      <textarea class="prompt-textarea" id="promptOutput" placeholder="톤앤매너를 선택하고 입력값을 채우면 자동으로 완성됩니다" readonly></textarea>
+      <div class="char-count" id="charCount"></div>
+    </div>
+
+    <div class="history-box">
+      <div class="history-header">
+        <span class="history-title">저장된 톤앤매너 프롬프트</span>
+        <div class="history-actions">
+          <button class="action-btn secondary" onclick="exportHistory()">히스토리 내보내기</button>
+          <button class="action-btn secondary" onclick="importHistory()">가져오기</button>
+        </div>
+      </div>
+      <div class="history-list" id="historyList">
+        <div class="history-empty">저장된 프롬프트가 없습니다.</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ─── PRESETS DATA ────────────────────────────────────────────────────────────
+
+const PRESETS = [
+  {
+    id: '3d-mat',
+    name: '3D 매트 아이콘',
+    badge: 'object', badgeClass: 'badge-object',
+    desc: '투명 PNG용 단일 오브제, 부드러운 입체감과 매트 질감',
+    inputs: [
+      { id: 'subject', label: '주요대상', type: 'text', placeholder: '예: 집 모형과 열쇠, 금고와 계약서' }
+    ],
+    template: (v) => `${v.subject || '[입력 필요]'}을/를 중심으로,
+프리미엄 금융 브랜드의 아이콘처럼 단정하고 입체감 있게 만들어줘.
+
+오브제는 매트하고 부드러운 표면으로, 광택은 최소화하고 그림자는 아주 약하게 처리해줘.
+형태는 단순하고 깔끔하게, 불필요한 디테일은 줄여줘.
+
+색감은 브랜드 보라(#5a0ad2) 계열을 중심으로 차분하게 구성하고,
+전체 구성은 중앙에 단독 배치로 잡아줘.
+
+배경은 투명 PNG로 만들어줘.
+글자, 숫자, 과한 장식, 복잡한 배경, 강한 바닥 그림자는 제외해줘.`
+  },
+  {
+    id: 'soft-clay',
+    name: '소프트 클레이 오브제',
+    badge: 'object', badgeClass: 'badge-object',
+    desc: '부드럽고 친근한 클레이/말랑한 3D 오브제',
+    inputs: [
+      { id: 'object', label: '오브제 이름', type: 'text', placeholder: '예: 저금통, 새싹, 동전 타워' },
+      { id: 'mood', label: '분위기', type: 'select', options: ['따뜻하고 친근한', '차분하고 신뢰감 있는', '밝고 경쾌한', '포근하고 안정적인'] },
+      { id: 'color', label: '색상', type: 'text', placeholder: '예: 파스텔 보라와 크림톤, 연한 민트와 화이트' }
+    ],
+    template: (v) => `${v.object || '[입력 필요]'}을/를,
+부드러운 클레이 3D 오브제 스타일로,
+전체적으로 ${v.mood || '따뜻하고 친근한'} 인상이 느껴지게 만들어줘.
+
+형태는 둥글고 말랑하지만 너무 유아적이지 않게,
+핵심 실루엣이 한눈에 보이도록 단순하고 균형 있게 정리해줘.
+색상은 ${v.color || '[입력 필요]'} 중심으로 부드럽게 구성해줘.
+
+구도는 중앙에 단독 배치로,
+빛은 확산광처럼 부드럽고 그림자는 아주 약하게 처리해줘.
+
+배경은 투명 PNG로 만들어줘.
+글자, 숫자, 과한 장식, 복잡한 배경, 강한 바닥 그림자는 제외해줘.`
+  },
+  {
+    id: 'premium-cut',
+    name: '프리미엄 제품 컷',
+    badge: 'visual', badgeClass: 'badge-visual',
+    desc: '금융 상품/캠페인 키비주얼에 맞는 고급스러운 제품 사진 톤',
+    inputs: [
+      { id: 'subject', label: '주요대상', type: 'text', placeholder: '예: 집 모형과 영인, 금고와 계약서' }
+    ],
+    template: (v) => `${v.subject || '[입력 필요]'}을/를 중심으로,
+프리미엄 금융 브랜드의 제품 컷처럼 고급스럽고 정돈된 장면으로 만들어줘.
+
+오브제는 매탄 다크 그레이 표면 위에 안정적으로 배치하고,
+전체 구성은 여백이 충분하며 과하게 장식적이지 않게 정리해줘.
+조명은 부드러운 스튜디오 조명으로,
+표면 질감과 형태가 선명하게 보이되 너무 번쩍이지 않게 해줘.
+
+색감은 차분한 뉴트럴 톤을 기본으로 하고,
+${v.subject || '[입력 필요]'}가 자연스럽게 시선을 끌게 해줘.
+
+카메라는 제품 촬영처럼 깔끔한 정면 또는 약간 비스듬한 구도로 잡아줘.
+텍스트, 로고, 숫자, 사람, 복잡한 배경은 제외해줘.`
+  },
+  {
+    id: 'cinematic',
+    name: '시네마틱 상황 묘사',
+    badge: 'scene', badgeClass: 'badge-scene',
+    desc: '메시지를 장면 전체로 보여주는 드라마틱한 키비주얼',
+    inputs: [
+      { id: 'message', label: '전달 메시지', type: 'text', placeholder: '예: 빠른 승인, 막힌 상황의 해결, 꾸준한 성장' },
+      { id: 'background', label: '배경 환경', type: 'text', placeholder: '예: 도시 야경, 아파트 단지, 어두운 복도' },
+      { id: 'keyScene', label: '핵심 장면', type: 'text', placeholder: '예: 하나의 창문에만 따뜻한 빛이 켜지는 장면' }
+    ],
+    template: (v) => `${v.background || '[입력 필요]'}을 배경으로,
+${v.message || '[입력 필요]'} 메시지가 장면 전체에서 자연스럽게 느껴지도록 만들어줘.
+
+핵심 장면은 ${v.keyScene || '[입력 필요]'}으로 구성하고,
+주변은 절제되어 있지만 중심 요소는 분명하게 도드라지게 해줘.
+
+전체 분위기는 따뜻하고 희망적인 느낌으로,
+빛과 그림자의 대비를 활용하되 과하게 어둡거나 공포스럽지 않게 정리해줘.
+
+카메라는 광고 키비주얼처럼 안정적인 구도로 잡고,
+색감은 브랜드에 맞는 보라 포인트와 차분한 뉴트럴 톤을 함께 사용해줘.
+
+글자, 로고, 숫자, 현수막, 과도한 인물 표현은 제외해줘.`
+  },
+  {
+    id: 'flat-vector',
+    name: '플랫 벡터 그래픽',
+    badge: 'graphic', badgeClass: 'badge-graphic',
+    desc: '랜딩/배너에 쓰기 좋은 단순하고 명확한 벡터형 그래픽',
+    inputs: [
+      { id: 'scene', label: '오브제/장면', type: 'text', placeholder: '예: 신청 완료 화면, 우상향 그래프, 열린 자물쇠' },
+      { id: 'graphicTone', label: '그래픽 톤', type: 'select', options: ['미니멀하고 명확한', '친근하고 둥근', '차분하고 신뢰감 있는', '밝고 경쾌한'] },
+      { id: 'color', label: '색상', type: 'text', placeholder: '예: 보라색 중심, 그레이와 화이트 바탕' },
+      { id: 'layout', label: '구성', type: 'select', options: ['중앙에 크게 배치', '좌우 균형 있게 배치', '넉넉한 여백을 둔 배치', '아이콘 몇 개가 질서 있게 모인 구성'] }
+    ],
+    template: (v) => `${v.scene || '[입력 필요]'}을/를,
+깔끔한 플랫 벡터 그래픽 스타일로 만들어줘.
+
+전체 톤은 ${v.graphicTone || '미니멀하고 명확한'} 느낌으로,
+선과 면을 단순하게 정리하고 불필요한 디테일은 줄여줘.
+색상은 ${v.color || '[입력 필요]'} 중심으로 사용하고,
+구성은 ${v.layout || '중앙에 크게 배치'}로 잡아줘.
+
+그림자는 거의 없거나 아주 약하게,
+형태는 한눈에 이해되도록 명확하게 표현해줘.
+
+텍스트, 숫자, 로고, 복잡한 배경, 과한 패턴은 제외해줘.`
+  }
+];
+
+// ─── STATE ───────────────────────────────────────────────────────────────────
+
+let currentPreset = null;
+let inputValues = {};
+let history = JSON.parse(localStorage.getItem('toneHistory') || '[]');
+
+// ─── RENDER ──────────────────────────────────────────────────────────────────
+
+function renderPresets() {
+  const list = document.getElementById('presetList');
+  list.innerHTML = PRESETS.map(p => `
+    <div class="preset-item ${currentPreset?.id === p.id ? 'active' : ''}" onclick="selectPreset('${p.id}')">
+      <div class="preset-item-top">
+        <span class="preset-name">${p.name}</span>
+        <span class="preset-badge ${p.badgeClass}">${p.badge}</span>
+      </div>
+      <div class="preset-desc">${p.desc}</div>
+    </div>`).join('');
+}
+
+function renderInputs() {
+  const container = document.getElementById('inputsContainer');
+  if (!currentPreset) { container.innerHTML = ''; return; }
+
+  container.innerHTML = currentPreset.inputs.map(inp => {
+    if (inp.type === 'text') {
+      return `<div class="input-group">
+        <label class="input-label">${inp.label}</label>
+        <input class="text-input" id="inp_${inp.id}" placeholder="${inp.placeholder}" value="${inputValues[inp.id] || ''}" oninput="onInput('${inp.id}', this.value)">
+      </div>`;
+    }
+    if (inp.type === 'select') {
+      const opts = inp.options.map(o => `<option value="${o}" ${inputValues[inp.id] === o ? 'selected' : ''}>${o}</option>`).join('');
+      return `<div class="input-group">
+        <label class="input-label">${inp.label}</label>
+        <select class="select-input" id="inp_${inp.id}" onchange="onInput('${inp.id}', this.value)">
+          ${opts}
+        </select>
+      </div>`;
+    }
+    return '';
+  }).join('');
+
+  // Set default values for selects
+  currentPreset.inputs.forEach(inp => {
+    if (inp.type === 'select' && !inputValues[inp.id]) {
+      inputValues[inp.id] = inp.options[0];
+    }
+  });
+}
+
+function selectPreset(id) {
+  currentPreset = PRESETS.find(p => p.id === id);
+  inputValues = {};
+  // Set select defaults
+  currentPreset.inputs.forEach(inp => {
+    if (inp.type === 'select') inputValues[inp.id] = inp.options[0];
+  });
+  renderPresets();
+  renderInputs();
+  buildPrompt();
+}
+
+function onInput(id, value) {
+  inputValues[id] = value;
+  buildPrompt();
+}
+
+function buildPrompt() {
+  const output = document.getElementById('promptOutput');
+  const title = document.getElementById('resultTitle');
+  const charCount = document.getElementById('charCount');
+
+  if (!currentPreset) {
+    output.value = '';
+    title.textContent = '—';
+    charCount.textContent = '';
+    return;
+  }
+
+  title.textContent = currentPreset.name;
+  const text = currentPreset.template(inputValues);
+  output.value = text;
+  charCount.textContent = `${text.length}자`;
+}
+
+// ─── ACTIONS ─────────────────────────────────────────────────────────────────
+
+function copyPrompt() {
+  const text = document.getElementById('promptOutput').value;
+  if (!text) return;
+  navigator.clipboard.writeText(text).then(() => showToast('복사되었습니다!'));
+}
+
+function savePrompt() {
+  const text = document.getElementById('promptOutput').value;
+  if (!text || !currentPreset) return;
+  history.unshift({ text, preset: currentPreset.name, time: Date.now() });
+  localStorage.setItem('toneHistory', JSON.stringify(history));
+  renderHistory();
+  showToast('저장되었습니다!');
+}
+
+function renderHistory() {
+  const list = document.getElementById('historyList');
+  if (!history.length) { list.innerHTML = '<div class="history-empty">저장된 프롬프트가 없습니다.</div>'; return; }
+  list.innerHTML = history.map((item, i) => `
+    <div class="history-item" onclick="loadHistory(${i})">
+      <div class="history-item-meta">${item.preset} · ${new Date(item.time).toLocaleDateString('ko')}</div>
+      <div class="history-item-text">${item.text.split('\n')[0]}</div>
+    </div>`).join('');
+}
+
+function loadHistory(i) {
+  document.getElementById('promptOutput').value = history[i].text;
+}
+
+function exportHistory() {
+  const blob = new Blob([JSON.stringify(history, null, 2)], { type: 'application/json' });
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
+  a.download = `8percent_tone_prompts_${Date.now()}.json`; a.click();
+}
+
+function importHistory() {
+  const input = document.createElement('input'); input.type = 'file'; input.accept = '.json';
+  input.onchange = e => {
+    const file = e.target.files[0]; if (!file) return;
+    const reader = new FileReader();
+    reader.onload = ev => {
+      try {
+        history = [...JSON.parse(ev.target.result), ...history];
+        localStorage.setItem('toneHistory', JSON.stringify(history));
+        renderHistory(); showToast('가져왔습니다!');
+      } catch { alert('올바른 JSON 파일을 선택해주세요.'); }
+    };
+    reader.readAsText(file);
+  };
+  input.click();
+}
+
+function showToast(msg) {
+  const t = document.getElementById('toast'); t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2000);
+}
+
+// ─── INIT ────────────────────────────────────────────────────────────────────
+renderPresets();
+renderHistory();
+</script>
+</body>
+</html>
